@@ -1,0 +1,9 @@
+.DS_Store
+.build/
+build/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+.swiftpm/
+**/graphify-out/
+GRAPH_REPORT.md
