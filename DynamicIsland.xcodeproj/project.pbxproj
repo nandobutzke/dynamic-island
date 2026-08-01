@@ -8,35 +8,51 @@
 
 /* Begin PBXBuildFile section */
 		07F595415E50804455C5F25C /* SpotifyPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A98B27CC33C870E8B215020 /* SpotifyPlayerView.swift */; };
+		1F108BB6A4F564BA73B10AAB /* spotify-logo.png in Resources */ = {isa = PBXBuildFile; fileRef = D6FC87FE71FA0EBBD9E8BB70 /* spotify-logo.png */; };
+		2DABEBB7DAECE49F5F89B5D4 /* BrandLogos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B6A798C61B93556687755C1 /* BrandLogos.swift */; };
 		31F99598DC6AC7A8E635CF37 /* NotchGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BCE58E085C670AD2212A37B /* NotchGeometry.swift */; };
+		4EB4719AF9CC5D9D1FBC2034 /* ScreenshotClipboardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9AF837FE7F85AE069C43970 /* ScreenshotClipboardService.swift */; };
+		5F1F9C481F82B6D3CE977CDF /* AppKitActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64D1B91FF520B692F079DD81 /* AppKitActionButton.swift */; };
 		60CC334B11D35B58E448FD8A /* IslandStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FE466701BC76346CC1EEB8E /* IslandStore.swift */; };
 		6E8F6069A90F8ECB7BAD99B5 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B212BD97DA7A020FA2A39075 /* LaunchAtLogin.swift */; };
 		7AB54F3278B4F6EBE5036A24 /* IslandPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2DD0DA2385AFE5EA1157EE /* IslandPanelController.swift */; };
 		875906B73BF13C92C07F129C /* AuthSessionWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9DBC6E203400EE2E3304058 /* AuthSessionWindow.swift */; };
+		902F6F1D44B208E259FD169F /* ScreenshotClipboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 212253FED22E5D6B27C40B50 /* ScreenshotClipboardView.swift */; };
 		94DEEBA546F9333DF351A13E /* SpotifyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0767FDE68D5B2786315C8176 /* SpotifyService.swift */; };
 		959BC885335380D3BF5023F1 /* IslandRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAD2969A95B6E25F273C75B9 /* IslandRootView.swift */; };
 		A26FC4ECE09139FEB393DE35 /* DynamicIslandApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9DD5077DFC0BFF7080D8D3B /* DynamicIslandApp.swift */; };
+		A535834F432A03E7D7E341A0 /* ScreenshotModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50906E5803E08236B463595D /* ScreenshotModels.swift */; };
+		A834702F8976F17E302A392D /* cursor-logo.png in Resources */ = {isa = PBXBuildFile; fileRef = FE09916725A383299B61F325 /* cursor-logo.png */; };
 		CCA03921916011C15FB2A0A1 /* CursorUsageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AF42EE3E36004D248A85A74 /* CursorUsageService.swift */; };
 		D79DFF4EE0E7416348B4AFC0 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58AF0F18AB1ECB8FF29595EE /* KeychainStore.swift */; };
 		DBE402B20E02627F54A6EC99 /* CursorUsageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADFA6512F7021DF24926CF9 /* CursorUsageView.swift */; };
 		E5AE5BF035BE1F96CF0E5217 /* CursorUsageModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01487C209C75756A0883DF0D /* CursorUsageModels.swift */; };
+		E6F7677481E3788B006A1759 /* IslandMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A57BF512A970FEE0EDC93E2 /* IslandMotion.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		01487C209C75756A0883DF0D /* CursorUsageModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorUsageModels.swift; sourceTree = "<group>"; };
 		0767FDE68D5B2786315C8176 /* SpotifyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyService.swift; sourceTree = "<group>"; };
 		1BCE58E085C670AD2212A37B /* NotchGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchGeometry.swift; sourceTree = "<group>"; };
+		212253FED22E5D6B27C40B50 /* ScreenshotClipboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotClipboardView.swift; sourceTree = "<group>"; };
 		4AF42EE3E36004D248A85A74 /* CursorUsageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorUsageService.swift; sourceTree = "<group>"; };
+		50906E5803E08236B463595D /* ScreenshotModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotModels.swift; sourceTree = "<group>"; };
 		58AF0F18AB1ECB8FF29595EE /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		64D1B91FF520B692F079DD81 /* AppKitActionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppKitActionButton.swift; sourceTree = "<group>"; };
 		6D2DD0DA2385AFE5EA1157EE /* IslandPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandPanelController.swift; sourceTree = "<group>"; };
 		7ADFA6512F7021DF24926CF9 /* CursorUsageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorUsageView.swift; sourceTree = "<group>"; };
+		8A57BF512A970FEE0EDC93E2 /* IslandMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandMotion.swift; sourceTree = "<group>"; };
 		8ED32FFC6B2F300C1FC7806B /* DynamicIsland.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DynamicIsland.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FE466701BC76346CC1EEB8E /* IslandStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandStore.swift; sourceTree = "<group>"; };
 		9A98B27CC33C870E8B215020 /* SpotifyPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyPlayerView.swift; sourceTree = "<group>"; };
+		9B6A798C61B93556687755C1 /* BrandLogos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandLogos.swift; sourceTree = "<group>"; };
 		B212BD97DA7A020FA2A39075 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		B9DBC6E203400EE2E3304058 /* AuthSessionWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSessionWindow.swift; sourceTree = "<group>"; };
 		C9DD5077DFC0BFF7080D8D3B /* DynamicIslandApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicIslandApp.swift; sourceTree = "<group>"; };
 		CAD2969A95B6E25F273C75B9 /* IslandRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandRootView.swift; sourceTree = "<group>"; };
+		D6FC87FE71FA0EBBD9E8BB70 /* spotify-logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "spotify-logo.png"; sourceTree = "<group>"; };
+		F9AF837FE7F85AE069C43970 /* ScreenshotClipboardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotClipboardService.swift; sourceTree = "<group>"; };
+		FE09916725A383299B61F325 /* cursor-logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "cursor-logo.png"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -56,6 +72,16 @@
 				8FE466701BC76346CC1EEB8E /* IslandStore.swift */,
 			);
 			path = Island;
+			sourceTree = "<group>";
+		};
+		4EFAB5C1E15508732A0E4EEC /* Screenshot */ = {
+			isa = PBXGroup;
+			children = (
+				F9AF837FE7F85AE069C43970 /* ScreenshotClipboardService.swift */,
+				212253FED22E5D6B27C40B50 /* ScreenshotClipboardView.swift */,
+				50906E5803E08236B463595D /* ScreenshotModels.swift */,
+			);
+			path = Screenshot;
 			sourceTree = "<group>";
 		};
 		5DAEC5E551B6D6CE100739E3 /* Products */ = {
@@ -87,6 +113,9 @@
 		88A9B86074BA6525B3CADC4B /* Support */ = {
 			isa = PBXGroup;
 			children = (
+				64D1B91FF520B692F079DD81 /* AppKitActionButton.swift */,
+				9B6A798C61B93556687755C1 /* BrandLogos.swift */,
+				8A57BF512A970FEE0EDC93E2 /* IslandMotion.swift */,
 				58AF0F18AB1ECB8FF29595EE /* KeychainStore.swift */,
 				B212BD97DA7A020FA2A39075 /* LaunchAtLogin.swift */,
 				1BCE58E085C670AD2212A37B /* NotchGeometry.swift */,
@@ -101,6 +130,7 @@
 				E93B0A6AB7D1905CA842A62C /* Auth */,
 				979DBDA211F0BBC6F8497B64 /* Features */,
 				334127192E6D3A5CCEB42C20 /* Island */,
+				FCFFD7C9B11A32E77B42A584 /* Resources */,
 				88A9B86074BA6525B3CADC4B /* Support */,
 			);
 			path = DynamicIsland;
@@ -110,6 +140,7 @@
 			isa = PBXGroup;
 			children = (
 				84595A7802B03836D7141C84 /* Cursor */,
+				4EFAB5C1E15508732A0E4EEC /* Screenshot */,
 				FF8604612D65885A8CE72C70 /* Spotify */,
 			);
 			path = Features;
@@ -131,6 +162,15 @@
 			path = Auth;
 			sourceTree = "<group>";
 		};
+		FCFFD7C9B11A32E77B42A584 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				FE09916725A383299B61F325 /* cursor-logo.png */,
+				D6FC87FE71FA0EBBD9E8BB70 /* spotify-logo.png */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		FF8604612D65885A8CE72C70 /* Spotify */ = {
 			isa = PBXGroup;
 			children = (
@@ -148,6 +188,7 @@
 			buildConfigurationList = 37B527515115C32BF53A4552 /* Build configuration list for PBXNativeTarget "DynamicIsland" */;
 			buildPhases = (
 				83F675404FCD26A43827D75C /* Sources */,
+				8808B2F1FB16C9921350D4D4 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -190,22 +231,40 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		8808B2F1FB16C9921350D4D4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A834702F8976F17E302A392D /* cursor-logo.png in Resources */,
+				1F108BB6A4F564BA73B10AAB /* spotify-logo.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		83F675404FCD26A43827D75C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5F1F9C481F82B6D3CE977CDF /* AppKitActionButton.swift in Sources */,
 				875906B73BF13C92C07F129C /* AuthSessionWindow.swift in Sources */,
+				2DABEBB7DAECE49F5F89B5D4 /* BrandLogos.swift in Sources */,
 				E5AE5BF035BE1F96CF0E5217 /* CursorUsageModels.swift in Sources */,
 				CCA03921916011C15FB2A0A1 /* CursorUsageService.swift in Sources */,
 				DBE402B20E02627F54A6EC99 /* CursorUsageView.swift in Sources */,
 				A26FC4ECE09139FEB393DE35 /* DynamicIslandApp.swift in Sources */,
+				E6F7677481E3788B006A1759 /* IslandMotion.swift in Sources */,
 				7AB54F3278B4F6EBE5036A24 /* IslandPanelController.swift in Sources */,
 				959BC885335380D3BF5023F1 /* IslandRootView.swift in Sources */,
 				60CC334B11D35B58E448FD8A /* IslandStore.swift in Sources */,
 				D79DFF4EE0E7416348B4AFC0 /* KeychainStore.swift in Sources */,
 				6E8F6069A90F8ECB7BAD99B5 /* LaunchAtLogin.swift in Sources */,
 				31F99598DC6AC7A8E635CF37 /* NotchGeometry.swift in Sources */,
+				4EB4719AF9CC5D9D1FBC2034 /* ScreenshotClipboardService.swift in Sources */,
+				902F6F1D44B208E259FD169F /* ScreenshotClipboardView.swift in Sources */,
+				A535834F432A03E7D7E341A0 /* ScreenshotModels.swift in Sources */,
 				07F595415E50804455C5F25C /* SpotifyPlayerView.swift in Sources */,
 				94DEEBA546F9333DF351A13E /* SpotifyService.swift in Sources */,
 			);

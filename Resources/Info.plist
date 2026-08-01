@@ -24,6 +24,8 @@
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Dynamic Island needs to control Spotify for playback and now-playing information.</string>
+	<key>NSAccessibilityUsageDescription</key>
+	<string>Dynamic Island uses Accessibility to detect screenshot shortcuts and open the system screenshot UI from the + button.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSHighResolutionCapable</key>

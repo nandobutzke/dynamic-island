@@ -26,6 +26,12 @@ struct DynamicIslandApp: App {
                 }
             }
 
+            if store.needsAccessibilityHint {
+                Button("Enable Accessibility for Screenshots…") {
+                    store.requestAccessibilityPermission()
+                }
+            }
+
             Divider()
 
             Toggle("Launch at Login", isOn: Binding(

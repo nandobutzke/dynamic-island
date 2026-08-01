@@ -9,6 +9,12 @@ struct IslandRootView: View {
         switch store.displayedModule {
         case .cursor: return CGSize(width: 380, height: store.usage == nil ? 176 : 288)
         case .spotify: return CGSize(width: 340, height: store.spotifyError == nil ? 196 : 224)
+        case .screenshot:
+            let extra: CGFloat = store.needsAccessibilityHint ? 28 : 0
+            return CGSize(
+                width: ScreenshotClipboardLayout.expandedWidth(itemCount: store.screenshots.count),
+                height: ScreenshotClipboardLayout.expandedBaseHeight + extra
+            )
         }
     }
 
@@ -20,6 +26,9 @@ struct IslandRootView: View {
         switch store.displayedModule {
         case .cursor: return (store.usage == nil ? 176 : 288) + expandedContentTopPadding - 12
         case .spotify: return (store.spotifyError == nil ? 196 : 224) + expandedContentTopPadding - 12
+        case .screenshot:
+            let extra: CGFloat = store.needsAccessibilityHint ? 28 : 0
+            return ScreenshotClipboardLayout.expandedBaseHeight + extra + expandedContentTopPadding - 12
         }
     }
 
@@ -89,6 +98,9 @@ struct CompactIslandView: View {
             case .cursor:
                 CursorCompactBadge(percent: store.usage.map(\.worstPercent))
                     .transition(IslandMotion.moduleTransition(forward: false))
+            case .screenshot:
+                ScreenshotCompactBadge(count: store.screenshots.count)
+                    .transition(IslandMotion.moduleTransition(forward: true))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -132,6 +144,18 @@ struct ExpandedIslandView: View {
                         onPrevious: store.spotifyPrevious,
                         onPlayPause: store.spotifyPlayPause,
                         onNext: store.spotifyNext
+                    )
+                    .transition(IslandMotion.moduleTransition(forward: store.moduleSwitchForward))
+                case .screenshot:
+                    ScreenshotClipboardView(
+                        screenshots: store.screenshots,
+                        needsAccessibilityHint: store.needsAccessibilityHint,
+                        copiedID: store.copiedScreenshotID,
+                        onCopy: store.copyScreenshot,
+                        onDelete: store.deleteScreenshot,
+                        onPlus: store.captureNewScreenshot,
+                        onInteract: store.noteScreenshotInteraction,
+                        onRequestAccessibility: store.requestAccessibilityPermission
                     )
                     .transition(IslandMotion.moduleTransition(forward: store.moduleSwitchForward))
                 }

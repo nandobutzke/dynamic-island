@@ -4,15 +4,18 @@ import SwiftUI
 enum BrandLogo {
     case cursor
     case spotify
+    case screenshot
 
-    private var resourceName: String {
+    private var resourceName: String? {
         switch self {
         case .cursor: "cursor-logo"
         case .spotify: "spotify-logo"
+        case .screenshot: nil
         }
     }
 
     var nsImage: NSImage? {
+        guard let resourceName else { return nil }
         if let url = Bundle.module.url(forResource: resourceName, withExtension: "png"),
            let image = NSImage(contentsOf: url) {
             return image
@@ -56,6 +59,11 @@ struct BrandLogoImage: View {
                         .foregroundStyle(selected ? Color(red: 0.11, green: 0.73, blue: 0.33) : .white.opacity(0.38))
                 case .cursor:
                     CursorMark()
+                        .foregroundStyle(selected ? .white : .white.opacity(0.38))
+                case .screenshot:
+                    Image(systemName: "camera.fill")
+                        .resizable()
+                        .scaledToFit()
                         .foregroundStyle(selected ? .white : .white.opacity(0.38))
                 }
             }
@@ -122,7 +130,13 @@ struct ModuleSwitchButton: View {
                 }
 
                 BrandLogoImage(
-                    logo: module == .cursor ? .cursor : .spotify,
+                    logo: {
+                        switch module {
+                        case .cursor: return .cursor
+                        case .spotify: return .spotify
+                        case .screenshot: return .screenshot
+                        }
+                    }(),
                     size: 20,
                     selected: isSelected
                 )
@@ -132,6 +146,6 @@ struct ModuleSwitchButton: View {
         }
         .buttonStyle(.plain)
         .animation(IslandMotion.selection, value: isSelected)
-        .help(module == .cursor ? "Cursor" : "Spotify")
+        .help(module.displayName)
     }
 }

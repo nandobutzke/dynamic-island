@@ -209,6 +209,13 @@ final class IslandPanelController: NSObject {
                 // Extra height for comfortable control padding at the bottom.
                 let base: CGFloat = store.spotifyError == nil ? 196 : 224
                 return CGSize(width: 340, height: base + topPad - 12)
+            case .screenshot:
+                let extra: CGFloat = store.needsAccessibilityHint ? 28 : 0
+                let base = ScreenshotClipboardLayout.expandedBaseHeight + extra
+                return CGSize(
+                    width: ScreenshotClipboardLayout.expandedWidth(itemCount: store.screenshots.count),
+                    height: base + topPad - 12
+                )
             }
         }()
         return store.presentation == .expanded ? expanded : compact

@@ -5,9 +5,17 @@ import SwiftUI
 enum IslandModule: String, CaseIterable, Identifiable {
     case cursor
     case spotify
+    case screenshot
 
     var id: String { rawValue }
 
+    var displayName: String {
+        switch self {
+        case .cursor: return "Cursor"
+        case .spotify: return "Spotify"
+        case .screenshot: return "Screenshots"
+        }
+    }
 }
 
 enum IslandPresentation: Equatable {
@@ -30,29 +38,40 @@ final class IslandStore: ObservableObject {
     @Published var spotifyError: String?
     @Published var isPulsing = false
     @Published var isRefreshingUsage = false
+    @Published var screenshots: [ScreenshotItem] = []
+    @Published var needsAccessibilityHint = false
+    @Published var copiedScreenshotID: UUID?
 
     private let cursorService = CursorUsageService()
     private let spotifyService = SpotifyService()
+    private let screenshotService = ScreenshotClipboardService()
     private var usageTimer: Timer?
     private var spotifyTimer: Timer?
     private var alertedThresholds: Set<String> = []
     private var pulseResetTask: Task<Void, Never>?
     private var phaseTask: Task<Void, Never>?
+    private var screenshotAutoCollapseTask: Task<Void, Never>?
+    private var copiedFeedbackTask: Task<Void, Never>?
+    private var screenshotPresentationIsTemporary = false
+    /// True only after explicit module-switcher selection (survives collapse → compact badge).
+    private var screenshotPinnedByUser = false
+    private var moduleBeforeScreenshot: IslandModule?
 
     /// Automatic context: Spotify while playing, otherwise Cursor.
+    /// Screenshot is never automatic — only via capture overlay or manual pin.
     var activeModule: IslandModule {
+        if let overrideModule, overrideModule == .screenshot {
+            return .screenshot
+        }
         if spotify.isRunning && spotify.isPlaying {
             return .spotify
         }
         return .cursor
     }
 
-    /// Module shown in the current presentation (honors manual switch when expanded).
+    /// Module shown in the current presentation (honors manual/pinned override).
     var displayedModule: IslandModule {
-        if presentation == .expanded {
-            return overrideModule ?? activeModule
-        }
-        return activeModule
+        overrideModule ?? activeModule
     }
 
     func start() {
@@ -70,6 +89,23 @@ final class IslandStore: ObservableObject {
                 self.spotify = updated
             }
         }
+
+        screenshotService.onScreenshotsChanged = { [weak self] items in
+            guard let self else { return }
+            withAnimation(IslandMotion.content) {
+                self.screenshots = items
+            }
+        }
+        screenshotService.onNewScreenshot = { [weak self] in
+            self?.presentScreenshotCapture()
+        }
+        screenshotService.onAccessibilityStatusChanged = { [weak self] trusted in
+            self?.needsAccessibilityHint = !trusted
+        }
+        screenshotService.start()
+        screenshots = screenshotService.items
+        needsAccessibilityHint = !screenshotService.isAccessibilityTrusted
+
         Task { await refreshUsage() }
         refreshSpotify()
         usageTimer = Timer.scheduledTimer(withTimeInterval: 5 * 60, repeats: true) { [weak self] _ in
@@ -91,6 +127,9 @@ final class IslandStore: ObservableObject {
         spotifyTimer?.invalidate()
         usageTimer = nil
         spotifyTimer = nil
+        screenshotService.stop()
+        screenshotAutoCollapseTask?.cancel()
+        copiedFeedbackTask?.cancel()
     }
 
     func toggleExpanded() {
@@ -104,6 +143,13 @@ final class IslandStore: ObservableObject {
     func collapse() {
         guard presentation == .expanded else { return }
         phaseTask?.cancel()
+        screenshotAutoCollapseTask?.cancel()
+        screenshotAutoCollapseTask = nil
+
+        let keepScreenshotPin = screenshotPinnedByUser && overrideModule == .screenshot
+        screenshotPresentationIsTemporary = false
+        moduleBeforeScreenshot = nil
+
         // 1) Hide content quickly so the shell can shrink cleanly.
         withAnimation(IslandMotion.contentHide) {
             contentRevealed = false
@@ -113,7 +159,12 @@ final class IslandStore: ObservableObject {
             guard !Task.isCancelled else { return }
             withAnimation(IslandMotion.collapse) {
                 presentation = .compact
-                overrideModule = nil
+                if keepScreenshotPin {
+                    overrideModule = .screenshot
+                } else {
+                    overrideModule = nil
+                    screenshotPinnedByUser = false
+                }
             }
         }
     }
@@ -124,7 +175,7 @@ final class IslandStore: ObservableObject {
         // 1) Grow the shell from the notch…
         withAnimation(IslandMotion.expand) {
             presentation = .expanded
-            overrideModule = activeModule
+            overrideModule = overrideModule ?? activeModule
             contentRevealed = false
         }
         // 2) …then reveal content once the morph has started.
@@ -142,6 +193,20 @@ final class IslandStore: ObservableObject {
         guard module != current || presentation == .compact else { return }
         let forward = moduleIndex(module) > moduleIndex(current)
         moduleSwitchForward = forward
+
+        if module == .screenshot {
+            screenshotPresentationIsTemporary = false
+            screenshotPinnedByUser = true
+            screenshotAutoCollapseTask?.cancel()
+            screenshotAutoCollapseTask = nil
+            moduleBeforeScreenshot = nil
+        } else {
+            screenshotPresentationIsTemporary = false
+            screenshotPinnedByUser = false
+            screenshotAutoCollapseTask?.cancel()
+            screenshotAutoCollapseTask = nil
+        }
+
         withAnimation(IslandMotion.moduleSwitch) {
             overrideModule = module
             presentation = .expanded
@@ -153,6 +218,125 @@ final class IslandStore: ObservableObject {
         switch module {
         case .cursor: return 0
         case .spotify: return 1
+        case .screenshot: return 2
+        }
+    }
+
+    // MARK: - Screenshot clipboard
+
+    func presentScreenshotCapture() {
+        // Already manually viewing screenshots — refresh only, no auto-collapse.
+        if overrideModule == .screenshot && presentation == .expanded && !screenshotPresentationIsTemporary {
+            return
+        }
+
+        if !screenshotPresentationIsTemporary {
+            if presentation == .expanded,
+               let current = overrideModule,
+               current != .screenshot {
+                moduleBeforeScreenshot = current
+            } else if spotify.isRunning && spotify.isPlaying {
+                moduleBeforeScreenshot = .spotify
+            } else {
+                moduleBeforeScreenshot = .cursor
+            }
+        }
+
+        screenshotPresentationIsTemporary = true
+        let forward = moduleIndex(.screenshot) > moduleIndex(displayedModule)
+        moduleSwitchForward = forward
+
+        phaseTask?.cancel()
+        withAnimation(IslandMotion.moduleSwitch) {
+            overrideModule = .screenshot
+            presentation = .expanded
+            contentRevealed = true
+        }
+        startScreenshotAutoCollapse()
+    }
+
+    func noteScreenshotInteraction() {
+        // Cancel auto-collapse; stay expanded until outside click / + / module switch.
+        // Do not pin to compact unless the user chose Screenshots in the switcher.
+        screenshotAutoCollapseTask?.cancel()
+        screenshotAutoCollapseTask = nil
+        screenshotPresentationIsTemporary = false
+        moduleBeforeScreenshot = nil
+    }
+
+    func copyScreenshot(_ item: ScreenshotItem) {
+        guard screenshotService.copyToPasteboard(item) else { return }
+        copiedScreenshotID = item.id
+        copiedFeedbackTask?.cancel()
+        copiedFeedbackTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 900_000_000)
+            guard !Task.isCancelled else { return }
+            if copiedScreenshotID == item.id {
+                copiedScreenshotID = nil
+            }
+        }
+    }
+
+    func deleteScreenshot(_ item: ScreenshotItem) {
+        screenshotService.remove(item)
+    }
+
+    func captureNewScreenshot() {
+        screenshotAutoCollapseTask?.cancel()
+        screenshotAutoCollapseTask = nil
+        screenshotPresentationIsTemporary = false
+        screenshotPinnedByUser = false
+        moduleBeforeScreenshot = nil
+
+        // Collapse first so the system UI isn't covered.
+        if presentation == .expanded {
+            phaseTask?.cancel()
+            withAnimation(IslandMotion.contentHide) {
+                contentRevealed = false
+            }
+            phaseTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 70_000_000)
+                guard !Task.isCancelled else { return }
+                withAnimation(IslandMotion.collapse) {
+                    presentation = .compact
+                    overrideModule = nil
+                }
+                try? await Task.sleep(nanoseconds: 120_000_000)
+                let ok = screenshotService.postScreenshotUIShortcut()
+                needsAccessibilityHint = !ok || !screenshotService.isAccessibilityTrusted
+                if !ok {
+                    screenshotService.armPasteboardWindow(
+                        durationNanoseconds: ScreenshotClipboardLayout.screenshotUIPasteboardArmNanoseconds
+                    )
+                    screenshotService.promptAccessibilityPermission()
+                }
+            }
+        } else {
+            let ok = screenshotService.postScreenshotUIShortcut()
+            needsAccessibilityHint = !ok || !screenshotService.isAccessibilityTrusted
+            if !ok {
+                screenshotService.armPasteboardWindow(
+                    durationNanoseconds: ScreenshotClipboardLayout.screenshotUIPasteboardArmNanoseconds
+                )
+                screenshotService.promptAccessibilityPermission()
+            }
+        }
+    }
+
+    func requestAccessibilityPermission() {
+        screenshotService.promptAccessibilityPermission()
+        needsAccessibilityHint = !screenshotService.isAccessibilityTrusted
+    }
+
+    private func startScreenshotAutoCollapse() {
+        screenshotAutoCollapseTask?.cancel()
+        screenshotAutoCollapseTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: ScreenshotClipboardLayout.autoCollapseNanoseconds)
+            guard !Task.isCancelled else { return }
+            guard screenshotPresentationIsTemporary else { return }
+            screenshotPresentationIsTemporary = false
+            moduleBeforeScreenshot = nil
+            collapse()
         }
     }
 
@@ -217,8 +401,10 @@ final class IslandStore: ObservableObject {
             spotify = next
             spotifyError = spotifyService.lastError
         }
-        // Clear manual override when music starts so compact auto-switches.
-        if !previousPlaying && spotify.isPlaying && presentation == .compact {
+        // Clear manual override when music starts so compact auto-switches —
+        // but keep a pinned screenshot module.
+        if !previousPlaying && spotify.isPlaying && presentation == .compact,
+           overrideModule != .screenshot {
             withAnimation(IslandMotion.moduleSwitch) {
                 overrideModule = nil
             }
@@ -247,6 +433,9 @@ final class IslandStore: ObservableObject {
     }
 
     private func triggerPulse() {
+        // Don't interrupt an active screenshot session.
+        if overrideModule == .screenshot { return }
+
         phaseTask?.cancel()
         withAnimation(IslandMotion.pulse) {
             isPulsing = true
