@@ -216,6 +216,8 @@ final class IslandPanelController: NSObject {
                     width: ScreenshotClipboardLayout.expandedWidth(itemCount: store.screenshots.count),
                     height: base + topPad - 12
                 )
+            case .system:
+                return CGSize(width: 380, height: 196 + topPad - 12)
             }
         }()
         return store.presentation == .expanded ? expanded : compact

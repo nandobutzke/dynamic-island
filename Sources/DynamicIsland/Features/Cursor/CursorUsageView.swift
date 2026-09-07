@@ -9,9 +9,17 @@ struct CursorUsageView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             if let usage {
-                Text(usage.includedTitle)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.92))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(usage.includedTitle)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.92))
+
+                    if let resetCaption = usage.resetCaption {
+                        Text(resetCaption)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
+                }
 
                 UsageBarRow(
                     title: "Cursor Models",

@@ -5,12 +5,14 @@ enum BrandLogo {
     case cursor
     case spotify
     case screenshot
+    case system
 
     private var resourceName: String? {
         switch self {
         case .cursor: "cursor-logo"
         case .spotify: "spotify-logo"
         case .screenshot: nil
+        case .system: nil
         }
     }
 
@@ -62,6 +64,11 @@ struct BrandLogoImage: View {
                         .foregroundStyle(selected ? .white : .white.opacity(0.38))
                 case .screenshot:
                     Image(systemName: "camera.fill")
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundStyle(selected ? .white : .white.opacity(0.38))
+                case .system:
+                    Image(systemName: "cpu.fill")
                         .resizable()
                         .scaledToFit()
                         .foregroundStyle(selected ? .white : .white.opacity(0.38))
@@ -135,6 +142,7 @@ struct ModuleSwitchButton: View {
                         case .cursor: return .cursor
                         case .spotify: return .spotify
                         case .screenshot: return .screenshot
+                        case .system: return .system
                         }
                     }(),
                     size: 20,

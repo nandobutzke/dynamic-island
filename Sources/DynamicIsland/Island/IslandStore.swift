@@ -6,6 +6,7 @@ enum IslandModule: String, CaseIterable, Identifiable {
     case cursor
     case spotify
     case screenshot
+    case system
 
     var id: String { rawValue }
 
@@ -14,6 +15,7 @@ enum IslandModule: String, CaseIterable, Identifiable {
         case .cursor: return "Cursor"
         case .spotify: return "Spotify"
         case .screenshot: return "Screenshots"
+        case .system: return "System"
         }
     }
 }
@@ -41,12 +43,15 @@ final class IslandStore: ObservableObject {
     @Published var screenshots: [ScreenshotItem] = []
     @Published var needsAccessibilityHint = false
     @Published var copiedScreenshotID: UUID?
+    @Published var systemStats = MacSystemSnapshot.placeholder
 
     private let cursorService = CursorUsageService()
     private let spotifyService = SpotifyService()
     private let screenshotService = ScreenshotClipboardService()
+    private let systemService = MacSystemService()
     private var usageTimer: Timer?
     private var spotifyTimer: Timer?
+    private var systemTimer: Timer?
     private var alertedThresholds: Set<String> = []
     private var pulseResetTask: Task<Void, Never>?
     private var phaseTask: Task<Void, Never>?
@@ -108,6 +113,7 @@ final class IslandStore: ObservableObject {
 
         Task { await refreshUsage() }
         refreshSpotify()
+        refreshSystemStats()
         usageTimer = Timer.scheduledTimer(withTimeInterval: 5 * 60, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 await self?.refreshUsage()
@@ -118,15 +124,23 @@ final class IslandStore: ObservableObject {
                 self?.refreshSpotify()
             }
         }
+        systemTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.refreshSystemStats()
+            }
+        }
         if let usageTimer { RunLoop.main.add(usageTimer, forMode: .common) }
         if let spotifyTimer { RunLoop.main.add(spotifyTimer, forMode: .common) }
+        if let systemTimer { RunLoop.main.add(systemTimer, forMode: .common) }
     }
 
     func stop() {
         usageTimer?.invalidate()
         spotifyTimer?.invalidate()
+        systemTimer?.invalidate()
         usageTimer = nil
         spotifyTimer = nil
+        systemTimer = nil
         screenshotService.stop()
         screenshotAutoCollapseTask?.cancel()
         copiedFeedbackTask?.cancel()
@@ -219,6 +233,7 @@ final class IslandStore: ObservableObject {
         case .cursor: return 0
         case .spotify: return 1
         case .screenshot: return 2
+        case .system: return 3
         }
     }
 
@@ -385,6 +400,13 @@ final class IslandStore: ObservableObject {
             usageError = CursorUsageError.unauthorized.localizedDescription
         } catch {
             usageError = error.localizedDescription
+        }
+    }
+
+    func refreshSystemStats() {
+        let snapshot = systemService.snapshot()
+        withAnimation(IslandMotion.content) {
+            systemStats = snapshot
         }
     }
 

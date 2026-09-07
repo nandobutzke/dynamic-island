@@ -25,9 +25,9 @@ enum ScreenshotClipboardLayout {
     static let previewSpacing: CGFloat = 8
     static let maxItems = 3
     static let autoCollapseNanoseconds: UInt64 = 4_000_000_000
-    /// Short window after ⌃⇧⌘3/4/5 (image usually lands immediately).
-    static let pasteboardArmNanoseconds: UInt64 = 4_000_000_000
-    /// Longer window after ⇧⌘5 / + (user still picking region/window).
+    /// Window after ⇧⌘3 (full-screen). Pasteboard/file can lag the key event.
+    static let pasteboardArmNanoseconds: UInt64 = 12_000_000_000
+    /// Longer window after ⇧⌘4/5 / + (user still picking region/window).
     static let screenshotUIPasteboardArmNanoseconds: UInt64 = 60_000_000_000
 
     static func expandedWidth(itemCount: Int) -> CGFloat {

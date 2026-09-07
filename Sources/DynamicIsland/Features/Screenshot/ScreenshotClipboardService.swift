@@ -13,10 +13,14 @@ final class ScreenshotClipboardService {
 
     private var directorySource: DispatchSourceFileSystemObject?
     private var directoryFileDescriptor: Int32 = -1
+    private var watchedDirectoryPath: String?
     private var knownSourcePaths: Set<String> = []
+    /// Paths seen but not yet ingested (incomplete write). Retry until success or expiry.
+    private var pendingSourcePaths: [String: Date] = [:]
     private var pasteboardTimer: Timer?
     private var scanTimer: Timer?
     private var keyMonitor: Any?
+    private var localKeyMonitor: Any?
     private var pasteboardArmDeadline: Date?
     private var isWritingToPasteboard = false
     private var lastPasteboardChangeCount = NSPasteboard.general.changeCount
@@ -55,15 +59,14 @@ final class ScreenshotClipboardService {
     }
 
     func stop() {
-        directorySource?.cancel()
-        directorySource = nil
-        if directoryFileDescriptor >= 0 {
-            close(directoryFileDescriptor)
-            directoryFileDescriptor = -1
-        }
+        stopDirectoryWatcher()
         if let keyMonitor {
             NSEvent.removeMonitor(keyMonitor)
             self.keyMonitor = nil
+        }
+        if let localKeyMonitor {
+            NSEvent.removeMonitor(localKeyMonitor)
+            self.localKeyMonitor = nil
         }
         pasteboardTimer?.invalidate()
         pasteboardTimer = nil
@@ -75,6 +78,10 @@ final class ScreenshotClipboardService {
 
     /// macOS ⇧⌘5 Options → Save to Clipboard (or equivalent).
     private var isScreenshotTargetClipboard: Bool {
+        let plist = NSDictionary(contentsOf: screencapturePrefsURL) as? [String: Any] ?? [:]
+        if let target = (plist["target-screenshot"] as? String) ?? (plist["target"] as? String) {
+            return target == "clipboard"
+        }
         let defaults = UserDefaults(suiteName: "com.apple.screencapture")
         let target = defaults?.string(forKey: "target-screenshot")
             ?? defaults?.string(forKey: "target")
@@ -108,10 +115,13 @@ final class ScreenshotClipboardService {
         let candidate = Date().addingTimeInterval(seconds)
         // Extend, don't shorten, if already armed longer.
         if let existing = pasteboardArmDeadline, existing > candidate {
+            attemptImmediatePasteboardIngest()
             return
         }
         pasteboardArmDeadline = candidate
-        lastPasteboardChangeCount = NSPasteboard.general.changeCount
+        // Do not snapshot changeCount here: Cmd+Shift+3 often updates the pasteboard
+        // before this arm runs. Resetting would hide that change from pollPasteboard.
+        attemptImmediatePasteboardIngest()
     }
 
     func copyToPasteboard(_ item: ScreenshotItem) -> Bool {
@@ -229,6 +239,12 @@ final class ScreenshotClipboardService {
     // MARK: - Directory watcher
 
     private func screenshotSaveDirectory() -> URL {
+        let plist = NSDictionary(contentsOf: screencapturePrefsURL) as? [String: Any] ?? [:]
+        for key in ["location", "location-last"] {
+            if let path = plist[key] as? String, !path.isEmpty {
+                return URL(fileURLWithPath: (path as NSString).expandingTildeInPath, isDirectory: true)
+            }
+        }
         let defaults = UserDefaults(suiteName: "com.apple.screencapture")
         for key in ["location", "location-last"] {
             if let path = defaults?.string(forKey: key), !path.isEmpty {
@@ -251,12 +267,24 @@ final class ScreenshotClipboardService {
         }
     }
 
+    private func stopDirectoryWatcher() {
+        let source = directorySource
+        directorySource = nil
+        watchedDirectoryPath = nil
+        directoryFileDescriptor = -1
+        source?.cancel()
+    }
+
     private func startDirectoryWatcher() {
         let dir = screenshotSaveDirectory()
         let path = dir.path
+        if watchedDirectoryPath == path, directorySource != nil { return }
+        stopDirectoryWatcher()
+
         let fd = open(path, O_EVTONLY)
         guard fd >= 0 else { return }
         directoryFileDescriptor = fd
+        watchedDirectoryPath = path
 
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd,
@@ -268,18 +296,15 @@ final class ScreenshotClipboardService {
                 self?.scanForNewScreenshotFiles()
             }
         }
-        source.setCancelHandler { [weak self] in
-            if let self, self.directoryFileDescriptor >= 0 {
-                close(self.directoryFileDescriptor)
-                self.directoryFileDescriptor = -1
-            }
+        source.setCancelHandler {
+            close(fd)
         }
         directorySource = source
         source.resume()
 
-        // Periodic scan covers delayed writes / permission races.
+        // Periodic scan covers delayed writes / permission races / missed FSEvents.
         scanTimer?.invalidate()
-        scanTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+        scanTimer = Timer.scheduledTimer(withTimeInterval: 0.45, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.scanForNewScreenshotFiles()
                 self?.refreshAccessibilityStatus()
@@ -308,11 +333,23 @@ final class ScreenshotClipboardService {
             // Ignore ancient files discovered after a location change.
             guard now.timeIntervalSince(stamp) < 120 else {
                 knownSourcePaths.insert(file.path)
+                pendingSourcePaths.removeValue(forKey: file.path)
                 continue
             }
 
-            knownSourcePaths.insert(file.path)
-            ingestFile(at: file)
+            // macOS often creates the file before PNG bytes are fully written.
+            // Only mark known after a successful ingest so later scans can retry.
+            if ingestFile(at: file) {
+                knownSourcePaths.insert(file.path)
+                pendingSourcePaths.removeValue(forKey: file.path)
+            } else if let firstSeen = pendingSourcePaths[file.path] {
+                if now.timeIntervalSince(firstSeen) > 30 {
+                    knownSourcePaths.insert(file.path)
+                    pendingSourcePaths.removeValue(forKey: file.path)
+                }
+            } else {
+                pendingSourcePaths[file.path] = now
+            }
         }
     }
 
@@ -320,10 +357,11 @@ final class ScreenshotClipboardService {
         let ext = url.pathExtension.lowercased()
         guard ["png", "jpg", "jpeg", "heic", "tif", "tiff"].contains(ext) else { return false }
         let name = url.lastPathComponent
-        if name.localizedCaseInsensitiveContains("Screenshot") { return true }
-        if name.localizedCaseInsensitiveContains("Screen Shot") { return true }
-        // Localized macOS names often still include "Screenshot" / "Captura".
-        if name.localizedCaseInsensitiveContains("Captura") { return true }
+        let needles = [
+            "Screenshot", "Screen Shot", "Captura", "Bildschirmfoto",
+            "Capture d’écran", "Capture d'écran", "Schermata", "スクリーンショット", "截屏", "Снимок"
+        ]
+        if needles.contains(where: { name.localizedCaseInsensitiveContains($0) }) { return true }
         return false
     }
 
@@ -331,7 +369,7 @@ final class ScreenshotClipboardService {
 
     private func startPasteboardPolling() {
         pasteboardTimer?.invalidate()
-        pasteboardTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: true) { [weak self] _ in
+        pasteboardTimer = Timer.scheduledTimer(withTimeInterval: 0.12, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.pollPasteboard()
             }
@@ -342,17 +380,14 @@ final class ScreenshotClipboardService {
     }
 
     private func pollPasteboard() {
-        let pasteboard = NSPasteboard.general
-        let changeCount = pasteboard.changeCount
-        guard changeCount != lastPasteboardChangeCount else { return }
-        lastPasteboardChangeCount = changeCount
-
-        guard !isWritingToPasteboard else { return }
-        guard let deadline = pasteboardArmDeadline, Date() <= deadline else { return }
-        guard let image = readImage(from: pasteboard) else { return }
-
-        pasteboardArmDeadline = nil
-        ingestImage(image)
+        if let deadline = pasteboardArmDeadline, Date() > deadline {
+            pasteboardArmDeadline = nil
+        }
+        if pasteboardArmDeadline != nil {
+            attemptImmediatePasteboardIngest()
+            return
+        }
+        lastPasteboardChangeCount = NSPasteboard.general.changeCount
     }
 
     private func readImage(from pasteboard: NSPasteboard) -> NSImage? {
@@ -374,6 +409,10 @@ final class ScreenshotClipboardService {
             NSEvent.removeMonitor(keyMonitor)
             self.keyMonitor = nil
         }
+        if let localKeyMonitor {
+            NSEvent.removeMonitor(localKeyMonitor)
+            self.localKeyMonitor = nil
+        }
 
         guard AXIsProcessTrusted() else {
             isAccessibilityTrusted = false
@@ -385,6 +424,12 @@ final class ScreenshotClipboardService {
             Task { @MainActor in
                 self?.handleKeyEvent(event)
             }
+        }
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            Task { @MainActor in
+                self?.handleKeyEvent(event)
+            }
+            return event
         }
     }
 
@@ -401,11 +446,11 @@ final class ScreenshotClipboardService {
         guard hasShift && hasCommand else { return }
 
         // ⇧⌘3/4/5 (with or without ⌃) — when Save-to is Clipboard, 3/4 land on pasteboard
-        // without requiring Control. ⇧⌘5 opens the UI and may also save to clipboard.
-        if keyCode == 0x17 {
-            armPasteboardWindow(durationNanoseconds: ScreenshotClipboardLayout.screenshotUIPasteboardArmNanoseconds)
-        } else {
+        // without requiring Control. ⇧⌘4/5 stay armed while the user picks a region.
+        if keyCode == 0x14 {
             armPasteboardWindow()
+        } else {
+            armPasteboardWindow(durationNanoseconds: ScreenshotClipboardLayout.screenshotUIPasteboardArmNanoseconds)
         }
     }
 
@@ -456,49 +501,61 @@ final class ScreenshotClipboardService {
         lastScreencaptureStamp = snapshot.stamp
         lastScreencapturePrefsmtime = snapshot.mtime
 
-        // A capture just happened. Prefer file scan; also arm pasteboard for clipboard target.
-        scanForNewScreenshotFiles()
-        if snapshot.targetClipboard || isScreenshotTargetClipboard {
-            armPasteboardWindow(durationNanoseconds: ScreenshotClipboardLayout.screenshotUIPasteboardArmNanoseconds)
-            // Image may already be on the pasteboard — try immediately.
-            attemptImmediatePasteboardIngest()
+        let dirPath = screenshotSaveDirectory().path
+        if dirPath != watchedDirectoryPath {
+            seedKnownSourceFiles()
+            startDirectoryWatcher()
         }
+
+        // A capture just happened. Prefer file scan; also arm pasteboard (clipboard
+        // destination, ⌃⇧⌘3/4, or delayed NSPasteboard PNG).
+        scanForNewScreenshotFiles()
+        armPasteboardWindow(durationNanoseconds: ScreenshotClipboardLayout.screenshotUIPasteboardArmNanoseconds)
     }
 
     private func attemptImmediatePasteboardIngest() {
         guard !isWritingToPasteboard else { return }
+        guard let deadline = pasteboardArmDeadline, Date() <= deadline else { return }
         let pasteboard = NSPasteboard.general
-        lastPasteboardChangeCount = pasteboard.changeCount
-        guard let image = readImage(from: pasteboard) else { return }
-        pasteboardArmDeadline = nil
-        ingestImage(image)
+        let changeCount = pasteboard.changeCount
+        guard let image = readImage(from: pasteboard) else {
+            // changeCount often bumps before PNG/TIFF bytes are readable — retry.
+            return
+        }
+        if ingestImage(image) {
+            lastPasteboardChangeCount = changeCount
+            pasteboardArmDeadline = nil
+        }
     }
 
     // MARK: - Ingest
 
-    private func ingestFile(at sourceURL: URL) {
-        guard let data = try? Data(contentsOf: sourceURL) else { return }
-        guard let image = NSImage(data: data) else { return }
+    @discardableResult
+    private func ingestFile(at sourceURL: URL) -> Bool {
+        guard let data = try? Data(contentsOf: sourceURL), data.count > 32 else { return false }
+        guard let image = NSImage(data: data) else { return false }
         let stored = pngData(from: image) ?? data
         let hash = Self.hash(stored)
-        guard !recentHashes.contains(hash) else { return }
-        commit(pngData: stored, hash: hash)
+        if recentHashes.contains(hash) { return true }
+        return commit(pngData: stored, hash: hash)
     }
 
-    private func ingestImage(_ image: NSImage) {
-        guard let data = pngData(from: image) else { return }
+    @discardableResult
+    private func ingestImage(_ image: NSImage) -> Bool {
+        guard let data = pngData(from: image) else { return false }
         let hash = Self.hash(data)
-        guard !recentHashes.contains(hash) else { return }
-        commit(pngData: data, hash: hash)
+        guard !recentHashes.contains(hash) else { return false }
+        return commit(pngData: data, hash: hash)
     }
 
-    private func commit(pngData: Data, hash: String) {
+    @discardableResult
+    private func commit(pngData: Data, hash: String) -> Bool {
         let id = UUID()
         let fileURL = storageDirectory.appendingPathComponent("\(id.uuidString).png")
         do {
             try pngData.write(to: fileURL, options: .atomic)
         } catch {
-            return
+            return false
         }
 
         let item = ScreenshotItem(
@@ -513,6 +570,7 @@ final class ScreenshotClipboardService {
         persist()
         onScreenshotsChanged?(items)
         onNewScreenshot?()
+        return true
     }
 
     private func pngData(from image: NSImage) -> Data? {

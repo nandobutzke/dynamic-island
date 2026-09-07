@@ -83,10 +83,10 @@ actor CursorUsageService {
         let cursorModels = clamp(autoPercent ?? 0)
         let otherModels = clamp(apiPercent ?? 0)
 
-        let cycleEnd = parseDate(
-            json["billingCycleEnd"] as? String
-                ?? (json["billingCycleEnd"] as? NSNumber).map { "\($0)" }
-        )
+        let cycleEnd = parseDate(jsonValue(json, key: "billingCycleEnd"))
+            ?? parseDate(jsonValue(json, key: "billingCycleStart")).flatMap {
+                Calendar.current.date(byAdding: .month, value: 1, to: $0)
+            }
 
         return CursorUsageSnapshot(
             membershipType: membership,
@@ -97,6 +97,12 @@ actor CursorUsageService {
             isUnlimited: isUnlimited,
             fetchedAt: Date()
         )
+    }
+
+    private static func jsonValue(_ json: [String: Any], key: String) -> String? {
+        if let s = json[key] as? String, !s.isEmpty { return s }
+        if let n = json[key] as? NSNumber { return n.stringValue }
+        return nil
     }
 
     private static func double(from value: Any?) -> Double? {
