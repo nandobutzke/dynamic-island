@@ -1,6 +1,6 @@
 # Dynamic Island for Mac
 
-A notch-native Dynamic Island for MacBook that keeps **Cursor usage** in your peripheral vision while you code — with Spotify controls as a secondary convenience.
+A notch-native Dynamic Island for MacBook that keeps **Cursor usage** in your peripheral vision while you code — with Spotify, Screenshot Clipboard, and **This Mac** (CPU / RAM / energy) as extra modules.
 
 [Português (Brasil)](README.pt-BR.md)
 
@@ -12,7 +12,7 @@ As a developer, I live inside the editor. Cursor’s included usage (and how fas
 
 I wanted that signal where my eyes already go: the **MacBook notch**. A glanceable pill that answers “how much of my plan have I used?” without opening Settings or the billing page.
 
-That’s the core of this project: **developer day-to-day awareness**. Spotify landed later as an extra module — useful when music is already playing, but not the reason the island exists. Screenshot Clipboard joined the same way: a tertiary convenience for recent captures without leaving the notch.
+That’s the core of this project: **developer day-to-day awareness**. Spotify landed later as an extra module — useful when music is already playing, but not the reason the island exists. Screenshot Clipboard joined the same way: a tertiary convenience for recent captures without leaving the notch. **System** is the same idea for the machine itself — a glance at CPU, RAM, and energy from the notch.
 
 This repo is **open source**. Use it, fork it, improve it.
 
@@ -24,7 +24,7 @@ This repo is **open source**. Use it, fork it, improve it.
 
 - Shows included usage for **Cursor Models** and **Other Models** (same two-pool idea as the Cursor dashboard)
 - Compact mode: a single percentage (the higher of the two pools), with color as you approach the limit
-- Expanded mode: progress bars and short footers in the style of the web UI
+- Expanded mode: days remaining until the next usage reset (`Resets today` / `N day(s) until reset`) sit **above** the consumption bars, then progress bars and short footers in the style of the web UI
 - Sign in through an embedded WebView; session stored in the Keychain
 - Soft pulse when usage crosses 90% / 100%
 
@@ -37,11 +37,19 @@ This repo is **open source**. Use it, fork it, improve it.
 ### Screenshot Clipboard (tertiary)
 
 - Captures system screenshots (`⇧⌘3/4/5`) into a notch history of the **last 3**
-- Auto-expands briefly on capture; reopen anytime via the module switcher (camera icon)
+- Opening the Screenshots module (camera icon) shows those **last 3** from local history immediately — not an empty strip until the next capture
+- Auto-expands briefly on capture; reopen anytime via the module switcher
 - Click a preview to copy; drag to other apps (file + image); hover **X** to remove
 - **+** collapses the island and opens the system screenshot UI (`⇧⌘5`)
 - Works whether macOS Save to is **File** or **Clipboard** — clipboard destination is fully supported
 - Optional **Accessibility** improves shortcut detection and enables **+**; file / system-prefs detection still works without it
+
+### System (This Mac)
+
+- Expanded tab titled **This Mac**: live **CPU**, **RAM**, and **Energy**
+- Each value has a short unit label underneath: CPU **Percent used**, RAM **Gigabytes used** (`used/total GB`), Energy **Avg app watts** (rolling average of process energy from running apps — not battery)
+- Compact badge shows CPU %; switcher icon is the CPU glyph (`cpu.fill`)
+- Sampled locally (host statistics + per-app energy counters) — nothing is sent off the machine
 
 ---
 
@@ -49,7 +57,7 @@ This repo is **open source**. Use it, fork it, improve it.
 
 - SwiftUI island glued to the **built-in** notch display (external monitors ignored)
 - Compact ↔ expanded morph with spring animation
-- Module switch (Cursor / Spotify / Screenshots) in the expanded view
+- Module switch (Cursor / Spotify / Screenshots / System) in the expanded view
 - Menu bar app (no Dock icon): sign in/out, refresh, launch at login, quit
 - Launch at Login via `SMAppService`
 
@@ -91,7 +99,7 @@ On first use: **Sign in to Cursor** from the island or the menu bar item. For Sp
 | Network | Calls Cursor’s dashboard usage API |
 | Accessibility | Detects screenshot shortcuts and posts `⇧⌘5` from the **+** button (optional) |
 
-**Caveats:** Cursor usage is read from an undocumented dashboard endpoint (`/api/usage-summary`) using your session cookie. Cursor may change or break this at any time. Treat this as a personal / experimental tool — use at your own risk. No telemetry is sent by this app beyond what Cursor’s own APIs receive when you fetch usage. Screenshot thumbnails are stored locally (last 3) under Application Support; original Desktop files are not moved or deleted.
+**Caveats:** Cursor usage is read from an undocumented dashboard endpoint (`/api/usage-summary`) using your session cookie. Cursor may change or break this at any time. Treat this as a personal / experimental tool — use at your own risk. No telemetry is sent by this app beyond what Cursor’s own APIs receive when you fetch usage. Screenshot thumbnails are stored locally (last 3) under Application Support and are restored when you open the Screenshots tab; original Desktop files are not moved or deleted. CPU, RAM, and app energy stay on-device. Energy is the real-time average power attributed to running apps, not battery charge.
 
 ---
 
@@ -101,7 +109,7 @@ On first use: **Sign in to Cursor** from the island or the menu bar item. For Sp
 Sources/DynamicIsland/
   App/           # App entry, menu bar, bootstrap
   Island/        # Notch panel, morph, views
-  Features/      # Cursor usage + Spotify + Screenshot Clipboard
+  Features/      # Cursor usage + Spotify + Screenshot Clipboard + System (This Mac)
   Auth/          # WebView login
   Support/       # Geometry, Keychain, motion, logos
 Scripts/         # package-app.sh

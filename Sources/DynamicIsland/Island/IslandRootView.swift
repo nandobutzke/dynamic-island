@@ -15,6 +15,7 @@ struct IslandRootView: View {
                 width: ScreenshotClipboardLayout.expandedWidth(itemCount: store.screenshots.count),
                 height: ScreenshotClipboardLayout.expandedBaseHeight + extra
             )
+        case .system: return CGSize(width: 380, height: 196)
         }
     }
 
@@ -29,6 +30,7 @@ struct IslandRootView: View {
         case .screenshot:
             let extra: CGFloat = store.needsAccessibilityHint ? 28 : 0
             return ScreenshotClipboardLayout.expandedBaseHeight + extra + expandedContentTopPadding - 12
+        case .system: return 196 + expandedContentTopPadding - 12
         }
     }
 
@@ -101,6 +103,9 @@ struct CompactIslandView: View {
             case .screenshot:
                 ScreenshotCompactBadge(count: store.screenshots.count)
                     .transition(IslandMotion.moduleTransition(forward: true))
+            case .system:
+                MacSystemCompactBadge(snapshot: store.systemStats)
+                    .transition(IslandMotion.moduleTransition(forward: true))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -157,6 +162,9 @@ struct ExpandedIslandView: View {
                         onInteract: store.noteScreenshotInteraction,
                         onRequestAccessibility: store.requestAccessibilityPermission
                     )
+                    .transition(IslandMotion.moduleTransition(forward: store.moduleSwitchForward))
+                case .system:
+                    MacSystemView(snapshot: store.systemStats)
                     .transition(IslandMotion.moduleTransition(forward: store.moduleSwitchForward))
                 }
             }
