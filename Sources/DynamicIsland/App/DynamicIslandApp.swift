@@ -32,6 +32,10 @@ struct DynamicIslandApp: App {
                 }
             }
 
+            Button("Allow Calendar access…") {
+                store.requestCalendarAccess()
+            }
+
             Divider()
 
             Toggle("Launch at Login", isOn: Binding(

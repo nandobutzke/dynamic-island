@@ -4,6 +4,7 @@ import SwiftUI
 enum BrandLogo {
     case cursor
     case spotify
+    case teams
     case screenshot
     case system
 
@@ -11,6 +12,7 @@ enum BrandLogo {
         switch self {
         case .cursor: "cursor-logo"
         case .spotify: "spotify-logo"
+        case .teams: "teams-logo"
         case .screenshot: nil
         case .system: nil
         }
@@ -62,6 +64,9 @@ struct BrandLogoImage: View {
                 case .cursor:
                     CursorMark()
                         .foregroundStyle(selected ? .white : .white.opacity(0.38))
+                case .teams:
+                    TeamsMark()
+                        .opacity(selected ? 1 : 0.38)
                 case .screenshot:
                     Image(systemName: "camera.fill")
                         .resizable()
@@ -118,6 +123,36 @@ private struct CursorMark: View {
         Image(systemName: "cursorarrow")
             .resizable()
             .scaledToFit()
+    }
+}
+
+/// Teams “T” card if the PNG is missing.
+private struct TeamsMark: View {
+    var body: some View {
+        Canvas { context, size in
+            let inset = size.width * 0.06
+            let rect = CGRect(origin: .zero, size: size).insetBy(dx: inset, dy: inset)
+            let radius = min(rect.width, rect.height) * 0.22
+            context.fill(
+                Path(roundedRect: rect, cornerRadius: radius),
+                with: .color(Color(red: 0.38, green: 0.39, blue: 0.65))
+            )
+            let tWidth = rect.width * 0.42
+            let tBar = max(rect.width * 0.12, 1.4)
+            let cx = rect.midX
+            var stem = Path()
+            stem.addRoundedRect(
+                in: CGRect(x: cx - tBar / 2, y: rect.minY + rect.height * 0.22, width: tBar, height: rect.height * 0.52),
+                cornerSize: CGSize(width: tBar / 2, height: tBar / 2)
+            )
+            var bar = Path()
+            bar.addRoundedRect(
+                in: CGRect(x: cx - tWidth / 2, y: rect.minY + rect.height * 0.22, width: tWidth, height: tBar),
+                cornerSize: CGSize(width: tBar / 2, height: tBar / 2)
+            )
+            context.fill(stem, with: .color(.white))
+            context.fill(bar, with: .color(.white))
+        }
     }
 }
 

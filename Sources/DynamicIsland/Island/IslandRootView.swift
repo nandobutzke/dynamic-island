@@ -6,6 +6,9 @@ struct IslandRootView: View {
 
     private var compactSize: CGSize { CGSize(width: 172, height: 36) }
     private var expandedSize: CGSize {
+        if store.presentedNudge != nil {
+            return NudgeIslandLayout.expandedSize
+        }
         switch store.displayedModule {
         case .cursor: return CGSize(width: 380, height: store.usage == nil ? 176 : 288)
         case .spotify: return CGSize(width: 340, height: store.spotifyError == nil ? 196 : 224)
@@ -24,6 +27,9 @@ struct IslandRootView: View {
     }
 
     private var expandedShellHeight: CGFloat {
+        if store.presentedNudge != nil {
+            return NudgeIslandLayout.expandedSize.height + expandedContentTopPadding - 12
+        }
         switch store.displayedModule {
         case .cursor: return (store.usage == nil ? 176 : 288) + expandedContentTopPadding - 12
         case .spotify: return (store.spotifyError == nil ? 196 : 224) + expandedContentTopPadding - 12
@@ -42,7 +48,12 @@ struct IslandRootView: View {
 
     /// Clamp to half-height so the top stays pill-round while height is still growing.
     private func cornerRadius(for height: CGFloat) -> CGFloat {
-        let target: CGFloat = store.presentation == .expanded ? 34 : 18
+        let target: CGFloat
+        if store.presentation == .expanded {
+            target = store.presentedNudge != nil ? NudgeIslandLayout.expandedCornerRadius : 34
+        } else {
+            target = 18
+        }
         return min(target, height / 2)
     }
 
@@ -56,8 +67,8 @@ struct IslandRootView: View {
 
             if store.presentation == .expanded {
                 ExpandedIslandView(store: store, namespace: moduleNamespace)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 28)
+                    .padding(.horizontal, store.presentedNudge != nil ? 28 : 24)
+                    .padding(.bottom, store.presentedNudge != nil ? 20 : 28)
                     .padding(.top, expandedContentTopPadding)
                     .opacity(store.contentRevealed ? 1 : 0)
                     .offset(y: store.contentRevealed ? 0 : 8)
@@ -85,6 +96,7 @@ struct IslandRootView: View {
         .animation(store.presentation == .expanded ? IslandMotion.expand : IslandMotion.collapse, value: size.width)
         .animation(store.presentation == .expanded ? IslandMotion.expand : IslandMotion.collapse, value: size.height)
         .animation(IslandMotion.expand, value: radius)
+        .animation(IslandMotion.expand, value: store.presentedNudge?.id)
     }
 }
 
@@ -93,6 +105,10 @@ struct CompactIslandView: View {
 
     var body: some View {
         Group {
+            if let nudge = store.presentedNudge {
+                NudgeCompactBadge(nudge: nudge)
+                    .transition(IslandMotion.moduleTransition(forward: true))
+            } else {
             switch store.activeModule {
             case .spotify:
                 SpotifyCompactBadge(nowPlaying: store.spotify)
@@ -107,9 +123,11 @@ struct CompactIslandView: View {
                 MacSystemCompactBadge(snapshot: store.systemStats)
                     .transition(IslandMotion.moduleTransition(forward: true))
             }
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(IslandMotion.moduleSwitch, value: store.activeModule)
+        .animation(IslandMotion.moduleSwitch, value: store.presentedNudge?.id)
     }
 }
 
@@ -119,6 +137,9 @@ struct ExpandedIslandView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
+            if let nudge = store.presentedNudge {
+                NudgeIslandView(nudge: nudge)
+            } else {
             HStack(spacing: 10) {
                 ForEach(IslandModule.allCases) { module in
                     ModuleSwitchButton(
@@ -172,7 +193,12 @@ struct ExpandedIslandView: View {
             .animation(IslandMotion.moduleSwitch, value: store.displayedModule)
 
             Spacer(minLength: 0)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: .infinity,
+            alignment: store.presentedNudge != nil ? .center : .topLeading
+        )
     }
 }

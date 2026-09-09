@@ -201,6 +201,10 @@ final class IslandPanelController: NSObject {
         let compact = CGSize(width: 172, height: 36)
         let topPad = NotchGeometry.expandedContentTopPadding()
         let expanded: CGSize = {
+            if store.presentedNudge != nil {
+                let base = NudgeIslandLayout.expandedSize
+                return CGSize(width: base.width, height: base.height + topPad - 12)
+            }
             switch store.displayedModule {
             case .cursor:
                 let base: CGFloat = store.usage == nil ? 176 : 288

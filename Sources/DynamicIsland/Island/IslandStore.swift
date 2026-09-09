@@ -44,6 +44,7 @@ final class IslandStore: ObservableObject {
     @Published var needsAccessibilityHint = false
     @Published var copiedScreenshotID: UUID?
     @Published var systemStats = MacSystemSnapshot.placeholder
+    @Published var presentedNudge: Nudge?
 
     private let cursorService = CursorUsageService()
     private let spotifyService = SpotifyService()
@@ -57,6 +58,10 @@ final class IslandStore: ObservableObject {
     private var phaseTask: Task<Void, Never>?
     private var screenshotAutoCollapseTask: Task<Void, Never>?
     private var copiedFeedbackTask: Task<Void, Never>?
+    private var nudgeCollapseTask: Task<Void, Never>?
+    private let calendarProvider = CalendarNudgeProvider()
+    private let teamsProvider = TeamsNudgeProvider()
+    private let lifestyleProvider = LifestyleNudgeProvider()
     private var screenshotPresentationIsTemporary = false
     /// True only after explicit module-switcher selection (survives collapse → compact badge).
     private var screenshotPinnedByUser = false
@@ -132,6 +137,15 @@ final class IslandStore: ObservableObject {
         if let usageTimer { RunLoop.main.add(usageTimer, forMode: .common) }
         if let spotifyTimer { RunLoop.main.add(spotifyTimer, forMode: .common) }
         if let systemTimer { RunLoop.main.add(systemTimer, forMode: .common) }
+
+        NudgeScheduler.shared.register(calendarProvider)
+        NudgeScheduler.shared.register(teamsProvider)
+        NudgeScheduler.shared.register(lifestyleProvider)
+        NudgeScheduler.shared.onPresent = { [weak self] nudge in
+            self?.presentNudge(nudge)
+        }
+        NudgeScheduler.shared.start()
+        Task { _ = await CalendarEventKitHelper.shared.requestAccess() }
     }
 
     func stop() {
@@ -142,8 +156,10 @@ final class IslandStore: ObservableObject {
         spotifyTimer = nil
         systemTimer = nil
         screenshotService.stop()
+        NudgeScheduler.shared.stop()
         screenshotAutoCollapseTask?.cancel()
         copiedFeedbackTask?.cancel()
+        nudgeCollapseTask?.cancel()
     }
 
     func toggleExpanded() {
@@ -159,6 +175,10 @@ final class IslandStore: ObservableObject {
         phaseTask?.cancel()
         screenshotAutoCollapseTask?.cancel()
         screenshotAutoCollapseTask = nil
+        presentedNudge = nil
+        if isPulsing {
+            withAnimation(IslandMotion.pulse) { isPulsing = false }
+        }
 
         let keepScreenshotPin = screenshotPinnedByUser && overrideModule == .screenshot
         screenshotPresentationIsTemporary = false
@@ -202,7 +222,40 @@ final class IslandStore: ObservableObject {
         }
     }
 
+    func presentNudge(_ nudge: Nudge) {
+        if overrideModule == .screenshot { return }
+        if presentation == .expanded && presentedNudge == nil && nudge.priority < .high {
+            return
+        }
+
+        nudgeCollapseTask?.cancel()
+        withAnimation(IslandMotion.pulse) {
+            presentedNudge = nudge
+            isPulsing = true
+        }
+        if presentation == .compact {
+            expand()
+        } else {
+            withAnimation(IslandMotion.contentReveal) {
+                contentRevealed = true
+            }
+        }
+
+        nudgeCollapseTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(NudgeSchedule.displayDuration * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            guard presentedNudge?.id == nudge.id else { return }
+            collapse()
+        }
+    }
+
+    func requestCalendarAccess() {
+        Task { _ = await CalendarEventKitHelper.shared.requestAccess() }
+    }
+
     func selectModule(_ module: IslandModule) {
+        presentedNudge = nil
+        nudgeCollapseTask?.cancel()
         let current = displayedModule
         guard module != current || presentation == .compact else { return }
         let forward = moduleIndex(module) > moduleIndex(current)
@@ -455,8 +508,9 @@ final class IslandStore: ObservableObject {
     }
 
     private func triggerPulse() {
-        // Don't interrupt an active screenshot session.
+        // Don't interrupt an active screenshot session or a nudge overlay.
         if overrideModule == .screenshot { return }
+        if presentedNudge != nil { return }
 
         phaseTask?.cancel()
         withAnimation(IslandMotion.pulse) {

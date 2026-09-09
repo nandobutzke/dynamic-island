@@ -22,9 +22,14 @@ targets:
       - path: Sources/DynamicIsland
         excludes:
           - Resources
+          - "**/*.json"
+          - graphify-out
       - path: Sources/DynamicIsland/Resources
         type: resources
         buildPhase: resources
+    dependencies:
+      - sdk: EventKit.framework
+      - sdk: libsqlite3.tbd
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.fernandobutzke.DynamicIsland
