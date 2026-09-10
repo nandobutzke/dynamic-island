@@ -13,8 +13,13 @@ let package = Package(
         .executableTarget(
             name: "DynamicIsland",
             path: "Sources/DynamicIsland",
+            exclude: ["graphify-out"],
             resources: [
                 .process("Resources")
+            ],
+            linkerSettings: [
+                .linkedFramework("EventKit"),
+                .linkedLibrary("sqlite3")
             ]
         )
     ]

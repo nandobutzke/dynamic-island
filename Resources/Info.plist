@@ -23,7 +23,11 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>Dynamic Island needs to control Spotify for playback and now-playing information.</string>
+	<string>Dynamic Island needs to control Spotify for playback and now-playing information, and may read the Teams Dock badge for unread counts.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Dynamic Island reads upcoming Calendar events to remind you before they start.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Dynamic Island reads upcoming Calendar events to remind you before they start.</string>
 	<key>NSAccessibilityUsageDescription</key>
 	<string>Dynamic Island uses Accessibility to detect screenshot shortcuts and open the system screenshot UI from the + button.</string>
 	<key>NSPrincipalClass</key>
